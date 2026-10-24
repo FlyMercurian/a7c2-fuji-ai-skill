@@ -2,6 +2,10 @@
 
 [Home](../../README.md) · [简体中文](../zh-CN/changelog.md)
 
+## Unreleased — conversational installation preview — 2026-10-24
+
+- Added a Windows local JSON guide and installable `a7c2-fuji-install` Skill, reusing the packaged worker. The six-look default is entirely Fujifilm-style; optional features remain off. Model/version feedback, prior-install handling, USB stability, explicit slot-replacement consent and current power feedback precede installation. Plans are validated offline and frozen; state survives chat/process restarts, unknown writes stop, and cold-reload guidance waits for process-ended evidence. Software verification and physical acceptance are separate. No camera interaction or physical acceptance is claimed by this change.
+
 ## 3.0.3 — USB recovery and sound workflow fixes — 2026-10-23
 
 - All desktop sound controls now work from the current selection/body: volume up/down/reset and conversion remain host-only; On/Off use fresh switch transactions; Restore original sound rebuilds only the supported AP sound-loader inverse from current bytes, preserves the switch and looks, and removes the boot call before its reader prerequisites. It no longer searches completed installation records or sends the user to full factory recovery. Sound verification reads currently loaded sound code/resources without a saved installation job. Optional listening/recovery statements can be recorded without an audition job. Stale staging is handled by the same current-request cleanup used by Save/Audition; no old pending task is an eligibility gate.

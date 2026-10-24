@@ -6,6 +6,28 @@ A desktop tool for the **Sony A7C II (ILCE-7CM2) on firmware 2.01**. It adds FL2
 
 **3.0 is the first release with a proper graphical interface.** Driver setup, installation, cold reload and verification all happen with buttons in one window; no command line needed.
 
+## Quick start: let AI guide you
+
+On a Windows computer, prepare this project and the [complete Windows package](https://github.com/QAQLeonard/a7c2-fl23-research/releases). Extract the package, then open the project folder in an AI client that can read local files and run commands, such as Codex.
+
+**For your first use, send this prompt to the AI:**
+
+```text
+Read skills/a7c2-fuji-install/SKILL.md in this project, prepare the required environment and install the skill, then guide me through installing the default Fujifilm-style looks on my A7C II. Tell me only what I need to do at the current step, and wait for my feedback before continuing.
+```
+
+**If the skill is already installed, just say:**
+
+```text
+Use $a7c2-fuji-install to guide me through installing the default Fujifilm-style looks on my A7C II.
+```
+
+The default installs **Classic Negative, Classic Chrome, Nostalgic Negative, Astia, Provia and Velvia** into custom slots 1–6, replacing their current contents. You do not need to pick each look. The AI first confirms your camera model and firmware, then guides connection, installation, cold reload and physical checks.
+
+To change the plan, simply say "Replace the fifth look with Eterna," "Install only the first three and keep the other slots," or "Also enable shutter sound." Other Fujifilm/Ricoh looks, Vertical Display, FL2/FL3 and the Lightroom plugin are optional.
+
+The AI guide is a Windows preview and still needs physical acceptance. Follow its prompts for camera actions; if something goes wrong, describe it to the AI instead of repeatedly retrying writes.
+
 ## Supported cameras
 
 > [!IMPORTANT]
@@ -26,12 +48,13 @@ For other models, these independent projects may help. They are not part of this
 **Author:** Xiaohongshu [QAQLeonard（读研版）](https://www.xiaohongshu.com/user/profile/660501f7000000000600d03c) · Douyin **LeonardZ** (ID `90860261487`)
 
 > [!IMPORTANT]
-> This tool modifies programs and settings in the camera firmware. Read the whole [step-by-step guide](#step-by-step-guide) before you start. If the app reports an error, **export a diagnostic bundle first. Do not keep retrying the write.**
+> This tool modifies programs and settings in the camera firmware. With the AI guide, follow its current instructions; for manual use, first read the [step-by-step guide](#step-by-step-guide). If the app reports an error, **export a diagnostic bundle first. Do not keep retrying the write.**
 
 The interface is in Simplified Chinese. Button names below are given in Chinese with an English translation, so you can match them on screen.
 
 ## Contents
 
+- [Quick start: let AI guide you](#quick-start-let-ai-guide-you)
 - [Supported cameras](#supported-cameras)
 - [What it does](#what-it-does)
 - [Download and requirements](#download-and-requirements)

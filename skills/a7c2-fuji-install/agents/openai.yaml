@@ -1,0 +1,4 @@
+interface:
+  display_name: "A7C2 富士外观安装向导"
+  short_description: "默认六款富士风格外观，逐步检查相机版本、连接和安装结果"
+  default_prompt: "使用 $a7c2-fuji-install 按默认配置带我一步步安装 A7C2 富士风格外观。"

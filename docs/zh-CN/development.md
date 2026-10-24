@@ -72,6 +72,8 @@
 
 ## 核心流程
 
+**对话式前端（Windows 预览）：**`ai_guide.py` 调用 `desktopapp.guide`，通过本地 JSON 命令记录用户反馈的机型／版本、默认六款富士方案及流程进度。只有 `start` 启动完整 Windows 安装包中的 `A7C2Tools.exe --worker`；初始化时用 `--backend` 选择 EXE。`status`、`plan`、`configure`、`answer`、`diagnostics` 都不打开 USB。后台异步执行，不设杀进程超时；`poll` 取得独立的进程结束凭据后才接收结果。写入暂停时引导断电，结果未知时停止，程序核验后还需用户机身反馈。输入在启动前离线校验并保存快照；其他未完成的向导／直接事务／一键安装会阻止新安装。只有明确处于 `WAIT_RELOAD`／`WAIT_RESOURCE_RELOAD` 的旧一键安装可以主动续接。技能源码在 `skills/a7c2-fuji-install`，通过 `dev/desktop/install_guide_skill.py` 安装；私有设置指向源码目录、Python 环境和原安装包后台，更新时保留当前向导进度。官方固件更新遵循 Sony 指南及用户菜单确认，不以 GUI 固定版本选项作为实机版本证据。本前端不改变原 GUI 默认方案和底层写入／备份契约。
+
 **直接事务**（`looktool/direct.py` 的 `DirectJob`）：
 1. `plan()` 是纯函数：把相机当前字节转换为目标字节和要改的设置，每种模式只改自己声明的区域。`bundle.plan()` 把多个模式（FL23、外观、ST 恢复、声音、竖屏）叠成一个计划。
 2. `run_direct()` 的顺序：读取当前状态 → 生成计划 → 保存 `PLANNED` → 原生预检 → 先写名称、再写程序窗口 → 完整读回程序 → 名称资源 → 设置 → WBI → `AWAITING_RELOAD`。每一步都记在 `direct.private.json` 里。
