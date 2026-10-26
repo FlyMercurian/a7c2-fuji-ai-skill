@@ -1,4 +1,4 @@
 interface:
-  display_name: "A7C2 富士外观安装向导"
-  short_description: "默认六款富士风格外观，逐步检查相机版本、连接和安装结果"
-  default_prompt: "使用 $a7c2-fuji-install 按默认配置带我一步步安装 A7C2 富士风格外观。"
+  display_name: "A7C2 富士／理光外观安装向导"
+  short_description: "默认六款富士／理光风格，可从十五款中自定义搭配，逐步检查与核验安装"
+  default_prompt: "使用 $a7c2-fuji-install 带我一步步安装 A7C2 滤镜，未指定时使用默认六款组合。"

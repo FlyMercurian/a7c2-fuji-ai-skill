@@ -21,7 +21,7 @@ from .paths import ROOT, data_root, write_json
 from .reloadguide import STEPS
 
 SCHEMA = 'a7c2-ai-guide/1'
-DEFAULTS = ('Classic Neg.', 'Classic Chrome', 'Nostalgic Neg.', 'Astia', 'Provia', 'Velvia')
+DEFAULTS = ('Classic Neg.', 'Classic Chrome', 'Nostalgic Neg.', 'Velvia', 'GR Positive Film', 'GR Negative Film')
 EXTRAS = ('fl23', 'sound', 'vertical', 'plugin')
 SONY = 'https://www.sony.com/electronics/support/e-mount-body-ilce-7-series/ilce-7cm2/software/00301105'
 SAFE_DIRECT = {'LOADED', 'COMPLETE', 'SUPERSEDED'}
@@ -506,16 +506,16 @@ def view(state):
         'FIRMWARE_UPDATE': '先按 Sony 官方说明升级到兼容的 2.01；核对当前版本对应的升级要求。更新期间不要取电池或存储卡，完成后重新查看机身版本。',
         'UNSUPPORTED_MODEL': '该工具只支持 ILCE-7CM2，停止安装。',
         'UNSUPPORTED_FIRMWARE': '版本尚未确认或不受支持。不要安装、盲目升级最新版或尝试降级；先核对机身版本。',
-        'CONNECT_CAMERA': '请关闭原软件，确保只有一台相机；设为海量存储，用数据线直接连接电脑，完成后反馈。',
+        'CONNECT_CAMERA': '请关闭原软件，确保只有一台相机；用数据线直接连接电脑，在相机 USB 连接方式界面选择“影像传输（MSC）”（即海量存储模式），完成后反馈。',
         'EXISTING_TRANSACTION': '发现未完成历史事务，先检查记录和诊断；可对已结束写入且等待重开的旧一键安装使用 adopt，不能新开写入覆盖它。',
         'READY_DRIVERS': '连接反馈已记录。下一步准备相机的两阶段驱动；Windows 管理员弹窗需用户在本机允许。',
         'READY_STABILITY': '驱动准备完成。下一步运行至少两分钟的 USB 只读稳定性检查。',
         'HISTORY_QUESTION': 'USB 检查通过；尚不确定以前是否改装，请先确认，不能默认清空自订槽位。',
         'READY_RESTORE': '以前安装过本项目。需先恢复原厂功能，会将自订 1–6 设为 ST，旧配方不能找回；这不是固件升级或降级。确认此影响和当前电量后再执行。',
-        'READY_INSTALL': '默认六款方案已准备好。说明所列槽位会被替换，告知替代选项；用户接受默认方案并报告当前电量后即可安装，无需逐款选择。',
+        'READY_INSTALL': '当前方案已准备好，以 plan 中的实际槽位和外观为准（最多六个）。说明所列槽位会被替换；用户接受此方案并报告当前电量后即可安装，无需逐款选择。',
         'RUNNING': '后台正在执行。保持相机供电和连接，不要拔线、关机、关闭进程或启动其他相机工具；用 status/poll 查看进度。',
-        'WAIT_RELOAD': '后台进程已返回，本次读写已结束。请按断电步骤重开，确认能正常取景并接回海量存储 USB 后反馈。',
-        'WAIT_RESOURCE_RELOAD': '后台进程已返回，名称阶段读写已结束，剩余安装尚未完成。请按断电步骤重开，接回 USB 后反馈。',
+        'WAIT_RELOAD': '后台进程已返回，本次读写已结束。请按断电步骤重开，确认能正常取景，接回 USB 并选择“影像传输（MSC）”（即海量存储模式）后反馈。',
+        'WAIT_RESOURCE_RELOAD': '后台进程已返回，名称阶段读写已结束，剩余安装尚未完成。请按断电步骤重开，接回 USB 并选择“影像传输（MSC）”（即海量存储模式）后反馈。',
         'READY_CONTINUE': '用户已报告断电重开；程序还须核验新启动证据。继续原事务，不新建安装；安装续接可能包含剩余写入，需确认供电。',
         'PHYSICAL_CHECKS': '程序核验已通过，后台读写已结束。可拔下 USB 并保持相机开机；请检查每个已装槽位的名称和预览、拍照及回放、原有 ST/FL 等外观，分别反馈结果。若加装其他功能，也需检查其实际效果。',
         'COMPLETE': '程序核验及用户机身检查均已通过，本次安装完成。',

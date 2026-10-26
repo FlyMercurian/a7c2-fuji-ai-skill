@@ -44,7 +44,8 @@ class GuideTests(unittest.TestCase):
                 path.write_text(json.dumps(dict(name=profile)), encoding='utf-8')
             rows.append(dict(slot=selected['slot'], profile=profile, name=profile,
                              path=str(path), sha256=guide.digest(path.read_bytes())))
-        return rows, [dict(name=name, category='Fujifilm') for name in guide.DEFAULTS]
+        return rows, [dict(name=name, category='Ricoh GR III' if name.startswith('GR ') else 'Fujifilm')
+                      for name in guide.DEFAULTS]
 
     def camera(self, version='2.01', modified='no'):
         guide.answer(self.state, 'camera', dict(model='ILCE-7CM2', firmware=version, modified=modified))
@@ -79,13 +80,27 @@ class GuideTests(unittest.TestCase):
                 self.launch('drivers')
         self.spawn.assert_not_called()
 
-    def test_default_is_six_fuji_without_extras_and_initialization_is_offline(self):
-        self.assertEqual([r['profile'] for r in self.state['plan']['looks']], list(guide.DEFAULTS))
+    def test_default_is_requested_fuji_ricoh_mix_without_extras_and_initialization_is_offline(self):
+        self.assertEqual([r['profile'] for r in self.state['plan']['looks']],
+                         ['Classic Neg.', 'Classic Chrome', 'Nostalgic Neg.', 'Velvia',
+                          'GR Positive Film', 'GR Negative Film'])
         self.assertFalse(any(self.state['extras'].values()))
         self.spawn.assert_not_called()
         before = self.path.read_bytes()
         self.assertEqual(guide.view(self.state)['phase'], 'CAMERA_INFO')
         self.assertEqual(before, self.path.read_bytes())
+
+    def test_updated_defaults_do_not_replace_a_saved_plan(self):
+        original = dict(looks=[dict(slot=2, profile='Astia'), dict(slot=5, profile='GR Vivid')])
+        guide.configure(self.state, original)
+        guide.save(self.state, self.path)
+        saved_plan = self.state['plan']
+        with patch.object(guide, 'DEFAULTS', ('Eterna',)):
+            loaded, _ = guide.load(self.session)
+            result = guide.view(loaded)
+        self.assertEqual(result['plan'], saved_plan)
+        self.assertEqual(result['plan']['replaces_slots'], [2, 5])
+        self.spawn.assert_not_called()
 
     def test_install_requires_actual_battery_and_slot_replacement_acceptance(self):
         self.prepare()

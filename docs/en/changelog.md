@@ -2,6 +2,10 @@
 
 [Home](../../README.md) · [简体中文](../zh-CN/changelog.md)
 
+## Unreleased — conversational skill configuration — 2026-10-26
+
+- New guide sessions default to Classic Neg., Classic Chrome, Nostalgic Neg., Velvia, GR Positive Film and GR Negative Film in slots 1–6. Saved sessions retain their plans. The skill introduces the six-slot limit, all 11 Fujifilm and 4 Ricoh color choices, numbered custom combinations and exact library-name mappings. Configuration readback, state gates and genuine user feedback apply to every model; model suggestions imply no measured success-rate claim. Optional features remain off. Validation is offline only; this change does not claim physical installation or acceptance.
+
 ## Unreleased — conversational installation preview — 2026-10-24
 
 - Added a Windows local JSON guide and installable `a7c2-fuji-install` Skill, reusing the packaged worker. The six-look default is entirely Fujifilm-style; optional features remain off. Model/version feedback, prior-install handling, USB stability, explicit slot-replacement consent and current power feedback precede installation. Plans are validated offline and frozen; state survives chat/process restarts, unknown writes stop, and cold-reload guidance waits for process-ended evidence. Software verification and physical acceptance are separate. No camera interaction or physical acceptance is claimed by this change.
