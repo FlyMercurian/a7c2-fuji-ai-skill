@@ -8,6 +8,12 @@ No Claude or additional agents without explicit user authorization.
 
 ## Branches and releases
 
+- This project is maintained independently at
+  `https://github.com/FlyMercurian/a7c2-fuji-ai-skill.git`.
+  Use this repository as `origin` for all future commits and pushes. Do not
+  restore the former project's `upstream` remote, push to it, or treat it as
+  the default source for synchronization. Local branch push destinations must
+  use `origin`; preserve historical source attribution and license notices.
 - The owner approved merging the Recovery/slot-restoration fixes and the
   service-first USB fix into `main` on October 20, 2026, and updating the existing
   v2.2-preview.1 commit/release. Develop future changes on feature branches;
