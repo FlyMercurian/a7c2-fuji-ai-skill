@@ -4,7 +4,7 @@ The six-slot planner is deliberately not a six-table camera installer.
 No USB access, file upload, settings write, WBI operation or camera execution.
 """
 import hashlib
-from .native import decode
+from .tablecodec import validate as decode
 
 AP_SHA = "86f4ac7d255cf6ffac56425539b8180e4893c7d39e1d38fbfeb6a93e145b1ad9"
 CP_SHA = "b307c7ffe5eab8a58138fd5d51157b15969c4f2963c1f58f5a9e5a2adbc8cac8"

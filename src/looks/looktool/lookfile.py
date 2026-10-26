@@ -6,7 +6,7 @@ an unsupported native photo stage or fit a supplied look again.
 import base64
 import json
 from pathlib import Path
-from . import native
+from .tablecodec import validate as validate_table
 
 SCHEMA = 'a7c2-creative-look/1'
 TARGET = {'model': 'ILCE-7CM2', 'firmware': '2.01'}
@@ -25,7 +25,7 @@ def validate(document):
         table = base64.b64decode(document['table_base64'], validate=True)
     except (KeyError, TypeError, ValueError) as exc:
         raise ValueError('Invalid compiled correction table') from exc
-    native.decode(table)
+    validate_table(table)
     stages = document.get('native_photo')
     if stages is not None:
         from .photoformat import validate_delta

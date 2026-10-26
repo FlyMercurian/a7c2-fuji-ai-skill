@@ -1,6 +1,6 @@
 """Full7 six-look data and preview adapters. Offline, exact-source only."""
 import struct
-from .native import decode
+from .tablecodec import validate as decode
 from .firmware import sha,transition,apply
 
 AP_SHA='690b5f17f21cba5c7cd937e6feb0f6967ea2793c0b4ca6fc1fffdcaa1ed0d761'

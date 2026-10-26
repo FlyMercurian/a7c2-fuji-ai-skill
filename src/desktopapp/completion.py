@@ -12,13 +12,17 @@ def archive_error(state):
 def text(state):
     if state.get('phase')!='COMPLETE':raise ValueError('上次安装尚未结束，请使用“继续安装”。')
     options=state.get('options',{})
-    lines=['本次所选操作已完成，程序与设置核对通过。','请在机身检查预览、拍摄和回放。','',
-        'FL2／FL3：'+('已启用' if options.get('fl23',True) else '本次未改动')]
+    lines=['本次所选操作已完成，程序与设置核对通过。','请在机身检查预览、拍摄和回放。','']
+    if not options.get('_preset_only'):
+        lines.append('FL2／FL3：'+('已启用' if options.get('fl23',True) else '本次未改动'))
     looks=options.get('looks',[])
     if looks:
         lines.append('自定义外观：已写入')
         lines.extend('  自订 %s：%s'%(row['slot'],row.get('name') or '沿用文件名称') for row in looks)
     else:lines.append('自定义外观：本次未改动')
+    if options.get('_preset_only'):
+        lines.append('本次预制滤镜安装已结束，无需为了查看结果再次刷写。')
+        return '\n'.join(lines)
     lines.append('电子快门声：'+('已启用支持，请检查机身音频信号设置' if options.get('sound',True) else '本次未选择'))
     if options.get('plugin'):lines.append('Lightroom 插件：已安装，请在插件管理器中启用')
     if options.get('vertical',True):

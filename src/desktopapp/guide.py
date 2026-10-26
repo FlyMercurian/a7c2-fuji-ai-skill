@@ -19,6 +19,7 @@ import zipfile
 
 from .paths import ROOT, data_root, write_json
 from .reloadguide import STEPS
+from .presetpolicy import enabled as preset_only_enabled
 
 SCHEMA = 'a7c2-ai-guide/1'
 DEFAULTS = ('Classic Neg.', 'Classic Chrome', 'Nostalgic Neg.', 'Velvia', 'GR Positive Film', 'GR Negative Film')
@@ -48,7 +49,7 @@ def lock(path):
 
 def history(roots, exclude=None):
     """Inspect configured work locations only, never open backups or firmware."""
-    from .lookbatch import read_only_failure
+    from .transactionevidence import read_only_failure
     rows, seen = [], set()
     for root in roots:
         root = Path(root).resolve()
@@ -141,9 +142,17 @@ def assets(library, selection):
 
 
 def backend_path(value=None):
-    path = Path(value) if value else ROOT.parent / 'A7C2Tools-Windows-x64/A7C2Tools/A7C2Tools.exe'
+    from .presetpolicy import enabled as preset_only
+    bundled = Path(sys.executable).resolve().parent.parent / 'backend/A7C2Tools.exe'
+    if getattr(sys, 'frozen', False) and preset_only():
+        bundled = Path(sys.executable).resolve()
+    default = bundled if getattr(sys, 'frozen', False) else ROOT.parent / 'A7C2Tools-Windows-x64/A7C2Tools/A7C2Tools.exe'
+    path = Path(value) if value else default
     path = path.resolve()
-    if path.name.lower() != 'a7c2tools.exe' or not path.is_file() or not (path.parent / '_internal').is_dir():
+    if preset_only() and path != Path(sys.executable).resolve():
+        raise ValueError('精简版只使用本包后台程序；不依赖或调用旧桌面软件。请保留旧事务的原运行目录。')
+    valid_name = path.name.lower() == 'a7c2tools.exe' or (preset_only() and path == Path(sys.executable).resolve())
+    if not valid_name or not path.is_file() or not (path.parent / '_internal').is_dir():
         raise ValueError('请选择整包解压后的 A7C2Tools.exe，旁边必须有 _internal。')
     return path
 
@@ -156,12 +165,17 @@ def initialize(folder, app=None, library=None, history_roots=()):
         raise ValueError('向导已经存在，请用 status 读取进度，不要重新初始化。')
     backend = backend_path(app)
     library = Path(library or backend.parent / 'Profiles').resolve()
+    if preset_only_enabled() and library != (backend.parent / 'Profiles').resolve():
+        raise ValueError('精简版只使用本包的预制滤镜库。')
     roots = list(dict.fromkeys(str(Path(p).resolve()) for p in
                               [data_root() / 'work', data_root() / 'runs', data_root() / 'ai-guide', *history_roots]))
     state = dict(schema=SCHEMA, phase='CAMERA_INFO', created_at=now(), workspace=str(folder),
                  backend=str(backend), library=str(library), history_roots=roots,
                  selection=[dict(slot=i, profile=n) for i, n in enumerate(DEFAULTS, 1)],
                  extras={k: False for k in EXTRAS}, events=[], physical_checks_accepted=False)
+    from .presetpolicy import enabled as preset_only
+    if preset_only():
+        state['preset_only'] = True
     # Missing/invalid profiles fail locally, before even creating an active guide.
     rows, choices = assets(library, state['selection'])
     state['plan'] = make_plan(rows, state['extras'])
@@ -189,6 +203,8 @@ def load(folder):
     state = read(path)
     if state.get('schema') != SCHEMA or Path(state['workspace']).resolve() != path.parent:
         raise ValueError('向导状态或目录不匹配。')
+    if preset_only_enabled() and not state.get('preset_only'):
+        raise ValueError('精简版不迁移其他版本的会话；保留原事务与原运行包。')
     return state, path
 
 
@@ -200,6 +216,8 @@ def configure(state, config):
         raise ValueError('配置只接受 looks 和 extras。')
     selection = config.get('looks', state['selection'])
     extras = dict(state['extras'], **config.get('extras', {}))
+    if state.get('preset_only') and any(extras.values()):
+        raise ValueError('本精简包只安装预制滤镜，不支持附加功能。')
     if set(extras) != set(EXTRAS) or any(type(v) is not bool for v in extras.values()):
         raise ValueError('extras 只接受 fl23/sound/vertical/plugin 的布尔值。')
     rows, choices = assets(state['library'], selection)
@@ -230,7 +248,7 @@ def answer(state, kind, values):
         state['phase'] = 'EXISTING_TRANSACTION' if state['existing_transactions'] else 'READY_DRIVERS'
     elif kind == 'history' and phase == 'HISTORY_QUESTION' and values.get('modified') in {'yes', 'no'}:
         state['camera_confirmation']['modified'] = values['modified']
-        state['phase'] = 'READY_RESTORE' if values['modified'] == 'yes' else 'READY_INSTALL'
+        state['phase'] = 'READY_RESTORE' if values['modified'] == 'yes' and not state.get('preset_only') else 'READY_INSTALL'
     elif kind == 'reboot' and phase in {'WAIT_RELOAD', 'WAIT_RESOURCE_RELOAD'} and values.get('confirmed'):
         state['reboot_report'] = dict(at=now(), user_reported=True)
         state['phase'] = 'READY_CONTINUE'
@@ -325,6 +343,8 @@ def battery_confirmation(values):
 
 def start(state, state_path, operation, values, spawn=None):
     phase = state['phase']
+    if state.get('preset_only') and operation == 'restore':
+        raise ValueError('本精简包不执行全机恢复，只安装预制滤镜。')
     expected = {'drivers': {'READY_DRIVERS'}, 'stability': {'READY_STABILITY'},
                 'restore': {'READY_RESTORE'}, 'install': {'READY_INSTALL'}, 'continue': {'READY_CONTINUE'}}
     if phase not in expected.get(operation, set()):
@@ -405,8 +425,9 @@ def start(state, state_path, operation, values, spawn=None):
     try:
         with (job / 'launcher.log').open('a', encoding='utf-8') as output:
             flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
-            child = (spawn or subprocess.Popen)([sys.executable, str(ROOT / 'ai_guide.py'), '_worker',
-                                                  '--request', str(request), '--backend', state['backend']],
+            command = ([sys.executable] if getattr(sys, 'frozen', False)
+                       else [sys.executable, str(ROOT / 'ai_guide.py')])
+            child = (spawn or subprocess.Popen)([*command, '_worker', '--request', str(request), '--backend', state['backend']],
                                                  stdout=output, stderr=output, stdin=subprocess.DEVNULL,
                                                  creationflags=flags, start_new_session=os.name != 'nt')
     except OSError as exc:
@@ -455,6 +476,8 @@ def poll(state):
             return
         modified = state['camera_confirmation']['modified']
         state['phase'] = {'yes': 'READY_RESTORE', 'no': 'READY_INSTALL', 'unknown': 'HISTORY_QUESTION'}[modified]
+        if state.get('preset_only') and modified == 'yes':
+            state['phase'] = 'READY_INSTALL'
     else:
         result_phase = result.get('phase')
         state['backend_workspace'] = result.get('workspace', state.get('backend_workspace'))
@@ -477,8 +500,10 @@ def adopt(state, workspace):
     if row is None:
         raise ValueError('请选择向导已列出的事务。')
     if row['kind'] != 'setup' or row['phase'] not in {'WAIT_RELOAD', 'WAIT_RESOURCE_RELOAD'}:
-        raise ValueError('该历史事务不能自动续接。保留诊断，在原软件中审查；不要删除状态或重试写入。')
+        raise ValueError('该历史事务不能自动续接。用 review 离线核对并保留诊断；不要删除状态或重试写入，也不要寻找未经实现的桌面结案入口。')
     old = read(workspace / 'setup.private.json')
+    if state.get('preset_only') and not old.get('options', {}).get('_preset_only'):
+        raise ValueError('精简包不迁移其他版本的未完成写入；请保留原事务及其运行目录。')
     if old.get('phase') != row['phase']:
         raise ValueError('旧事务已变化，请重新检查状态，不能用过时的记录续接。')
     sys.path.insert(0, str(ROOT / 'src/looks'))
@@ -499,6 +524,85 @@ def adopt(state, workspace):
                  adopted_plan_notice='续接原事务的已保存配置，默认六款不覆盖历史安装计划。')
 
 
+def review(state, workspace=None, apply=False):
+    """Offline, evidence-gated reconciliation; never replay or touch the camera."""
+    from .transactionevidence import running_camera_processes
+    folder = Path(workspace or state['workspace']).resolve()
+    known = {Path(state['workspace']).resolve(),
+             *(Path(row['workspace']).resolve() for row in state.get('existing_transactions', []))}
+    if folder not in known:
+        raise ValueError('只能复核当前会话或工具已列出的历史事务。')
+    result = dict(workspace=str(folder), camera_io=False, can_apply=False, applied=False,
+                  decision='STOP_UNKNOWN', reason='没有足以解除阻塞的启动／结束证据；保留记录并导出诊断，不要求用户到桌面程序找结案入口。')
+    try:
+        prior, path = load(folder)
+        if prior['phase'] not in {'RUNNING', 'NEEDS_REVIEW'}:
+            result.update(decision='NO_RECONCILIATION_NEEDED', reason='此会话没有待复核的后台启动。')
+            return result
+        active = prior['active']
+        job = Path(active['job']).resolve()
+        if job.parent != folder / 'jobs':
+            raise ValueError('任务目录不属于待复核会话。')
+        request_path = job / 'request.private.json'
+        request = read(request_path)
+        status = read(job / 'status.private.json')
+        if (digest(request_path.read_bytes()) != active['request_sha256']
+                or Path(request['guide_session']).resolve() != folder
+                or Path(request['job_dir']).resolve() != job
+                or request['action'] != active['action']
+                or status.get('action') != active['action']):
+            raise ValueError('请求、状态和启动记录不能相互对应。')
+        if running_camera_processes() or alive(active.get('pid')):
+            result['reason'] = '相关后台进程仍在运行，或无法证明启动进程已退出；不改变状态。'
+            return result
+        execution_path = job / 'execution.private.json'
+        execution = read(execution_path) if execution_path.exists() else None
+        ended_before_backend = (isinstance(execution, dict) and execution.get('phase') == 'ENDED'
+                                and execution.get('worker_started') is False and not execution.get('child_pid'))
+        nonwriting = {'drivers': ('usb_prepare', 'READY_DRIVERS'),
+                      'stability': ('usb_stability', 'READY_STABILITY')}
+        kind = nonwriting.get(active['operation'])
+        # This narrow legacy case permits retrying only an action that cannot
+        # write camera firmware/settings. It does NOT prove no USB contact.
+        pre_supervisor_nonwrite = (kind is not None and (active['action'], active['previous_phase']) == kind
+                                  and not prior.get('purpose') and request.get('arguments') == {}
+                                  and status.get('phase') == 'QUEUED' and execution is None
+                                  and not any((job / name).exists() for name in
+                                              ('launcher.claim', 'process.log', 'worker.log', 'result.private.json')))
+        valid_previous = {'drivers': {'READY_DRIVERS'}, 'stability': {'READY_STABILITY'},
+                          'install': {'READY_INSTALL'}, 'restore': {'READY_RESTORE'}, 'continue': {'READY_CONTINUE'}}
+        if active['previous_phase'] not in valid_previous.get(active['operation'], set()):
+            raise ValueError('原步骤与操作不匹配。')
+        if not ended_before_backend and not pre_supervisor_nonwrite:
+            return result
+        reason = ('SUPERVISOR_ENDED_BEFORE_BACKEND' if ended_before_backend
+                  else 'NONWRITING_ACTION_QUEUED_WITHOUT_SUPERVISOR_EVIDENCE')
+        result.update(can_apply=True, decision='RESUME_PREVIOUS_STEP', evidence=reason,
+                      resume_phase=active['previous_phase'], worker_never_started_proven=ended_before_backend,
+                      reason='可由向导保留原记录并返回原步骤；不会执行驱动准备、重试相机操作或更换滤镜方案。')
+        if apply:
+            # Keep every original receipt/log/request byte. Only the guide's
+            # audited lifecycle advances; this is not a manual status override.
+            prior['last_job'] = dict(active, status=status, execution=execution, reviewed=True)
+            prior['events'].append(dict(event='offline_launch_review', evidence=reason, job=str(job), at=now()))
+            prior['phase'] = active['previous_phase']
+            prior.pop('active', None)
+            prior.pop('error', None)
+            save(prior, path)
+            if folder == Path(state['workspace']).resolve():
+                state.clear()
+                state.update(prior)
+            else:
+                state['existing_transactions'] = history(state['history_roots'], state['workspace'])
+                if state['phase'] == 'EXISTING_TRANSACTION' and not state['existing_transactions']:
+                    state['phase'] = 'READY_DRIVERS'
+            result['applied'] = True
+        return result
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        result['reason'] = '证据不足或无法核对：' + str(exc) + '。保留记录并导出诊断。'
+        return result
+
+
 def view(state):
     phase = state['phase']
     prompts = {
@@ -507,7 +611,7 @@ def view(state):
         'UNSUPPORTED_MODEL': '该工具只支持 ILCE-7CM2，停止安装。',
         'UNSUPPORTED_FIRMWARE': '版本尚未确认或不受支持。不要安装、盲目升级最新版或尝试降级；先核对机身版本。',
         'CONNECT_CAMERA': '请关闭原软件，确保只有一台相机；用数据线直接连接电脑，在相机 USB 连接方式界面选择“影像传输（MSC）”（即海量存储模式），完成后反馈。',
-        'EXISTING_TRANSACTION': '发现未完成历史事务，先检查记录和诊断；可对已结束写入且等待重开的旧一键安装使用 adopt，不能新开写入覆盖它。',
+        'EXISTING_TRANSACTION': '发现未完成历史事务。先用 review 离线检查；仅 can_apply=true 时用 review --apply 对同一记录复核，保留证据。等待重开的旧一键安装可用 adopt；证据不足时停止并导出诊断，不要求用户打开桌面软件或寻找虚构的结案入口。',
         'READY_DRIVERS': '连接反馈已记录。下一步准备相机的两阶段驱动；Windows 管理员弹窗需用户在本机允许。',
         'READY_STABILITY': '驱动准备完成。下一步运行至少两分钟的 USB 只读稳定性检查。',
         'HISTORY_QUESTION': 'USB 检查通过；尚不确定以前是否改装，请先确认，不能默认清空自订槽位。',
@@ -529,6 +633,17 @@ def view(state):
                                     partial_slots=True, default_requires_no_selection=True),
                   physical_checks_accepted=state['physical_checks_accepted'],
                   offline_status=True)
+    if state.get('preset_only'):
+        result['preset_only'] = True
+        result['alternatives']['extras'] = []
+        if phase == 'EXISTING_TRANSACTION':
+            result['prompt'] = ('发现未完成历史事务，先用 review 离线核对；仅 can_apply=true 时可用 review --apply。'
+                                '只续接本精简版自身事务，其他版本需保留其原运行包和记录，不迁移或重放。')
+        elif phase == 'READY_RESTORE':
+            result['allowed_operations'] = []
+            result['prompt'] = '精简版不执行原厂恢复；版本或会话不匹配，请保留记录并停止。'
+        elif phase == 'PHYSICAL_CHECKS':
+            result['prompt'] = prompts[phase].replace('若加装其他功能，也需检查其实际效果。', '')
     for key in ('camera_confirmation', 'error', 'existing_transactions', 'adopted_plan_notice', 'last_job'):
         if key in state:
             result[key] = state[key]
@@ -587,6 +702,9 @@ def main(argv=None):
     run.add_argument('--replace-slots', action='store_true')
     resume = sub.add_parser('adopt')
     resume.add_argument('--workspace', type=Path, required=True)
+    inspect = sub.add_parser('review')
+    inspect.add_argument('--workspace', type=Path)
+    inspect.add_argument('--apply', action='store_true', help='Apply only a proven-safe offline lifecycle reconciliation')
     bundle = sub.add_parser('diagnostics')
     bundle.add_argument('--output', type=Path, required=True)
     internal = sub.add_parser('_worker')
@@ -607,7 +725,15 @@ def main(argv=None):
                     raise ValueError('请提供 init 返回的 --session 目录。')
                 with lock(args.session.resolve().parent / ('.' + args.session.name + '.lock')):
                     state, path = load(args.session)
-                    if args.command == 'answer':
+                    review_result = None
+                    if args.command == 'review':
+                        target = Path(args.workspace or state['workspace']).resolve()
+                        if target != Path(state['workspace']).resolve():
+                            with lock(target.parent / ('.' + target.name + '.lock')):
+                                review_result = review(state, target, args.apply)
+                        else:
+                            review_result = review(state, target, args.apply)
+                    elif args.command == 'answer':
                         answer(state, args.kind, read(args.file))
                     elif args.command == 'configure':
                         configure(state, read(args.file))
@@ -621,10 +747,13 @@ def main(argv=None):
                         if state['phase'] in {'CAMERA_INFO', 'CONNECT_CAMERA', 'READY_INSTALL', 'READY_RESTORE'}:
                             configure(state, {})
                     result = diagnostics(state, args.output) if args.command == 'diagnostics' else view(state)
+                    if review_result is not None:
+                        result['review'] = review_result
                     if args.command == 'start':
                         result['offline_status'] = False
                         result['background_worker_launched'] = True
-                    if args.command not in {'status', 'diagnostics'}:
+                    if (args.command not in {'status', 'diagnostics', 'review'}
+                            or (args.command == 'review' and review_result and review_result['applied'])):
                         save(state, path)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0

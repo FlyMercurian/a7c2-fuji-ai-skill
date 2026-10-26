@@ -70,13 +70,14 @@ def plan(current, records, options, selected):
             parsed = resources.decode(current[key])
             target[key] = (resources.rename(current[key], names, labels)[0] if
                 any(parsed['entries'].get(labels[s-1], {}).get('text') != title for s, title in names.items()) else current[key])
-    spec = importlib.util.spec_from_file_location('bundle_sound_candidate', nativebuild.ROOT / 'src/shutter_sound/candidate.py')
-    sound = importlib.util.module_from_spec(spec); spec.loader.exec_module(sound)
-    ap, cp = target['appFw.so'], target['cpapp-b.bin']
-    # An unchecked feature preserves its current state. Repair the exact legacy
-    # enabled patch in this same install plan without enabling an off feature.
-    if options.get('sound', True) or sound.is_legacy(cp):
-        target.update(sound.patch(ap, cp))
+    if not options.get('_preset_only'):
+        spec = importlib.util.spec_from_file_location('bundle_sound_candidate', nativebuild.ROOT / 'src/shutter_sound/candidate.py')
+        sound = importlib.util.module_from_spec(spec); spec.loader.exec_module(sound)
+        ap, cp = target['appFw.so'], target['cpapp-b.bin']
+        # The general desktop retains its existing legacy-sound repair. The
+        # preset-only worker never changes sound while importing selected looks.
+        if options.get('sound', True) or sound.is_legacy(cp):
+            target.update(sound.patch(ap, cp))
     if options.get('vertical_persistent', False):
         from .verticalpersist import field
         wanted[0].update(field(target['appFw.so'], working, True))

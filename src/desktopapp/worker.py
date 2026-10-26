@@ -40,6 +40,9 @@ def register_backup(path):
 
 def run(action, args, job):
     setup_runtime()
+    from .presetpolicy import enabled as preset_only, validate as preset_action
+    if preset_only():
+        args = preset_action(action, args)
     from .jobs import POWER_ACTIONS
     if action in POWER_ACTIONS:
         from looktool.power import require_power
@@ -197,6 +200,7 @@ def run(action, args, job):
             if result['phase'] == 'AWAITING_RELOAD':
                 response.update(phase='COMPLETED', reload_required=True)
         if (action in ('direct_looks_import','direct_resume_looks') and
+                not result.get('bundle_options', {}).get('_preset_only') and
                 result['phase'] in ('AWAITING_RELOAD','LOADED','COMPLETE') and
                 result.get('raw_profile_effective_since') and result.get('job_id')):
             # Publish computer-side profile mapping after the same write/readback

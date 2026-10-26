@@ -1,4 +1,4 @@
 interface:
-  display_name: "A7C2 富士／理光外观安装向导"
-  short_description: "默认六款富士／理光风格，可从十五款中自定义搭配，逐步检查与核验安装"
+  display_name: "A7C2 富士／理光预制滤镜安装向导"
+  short_description: "精简包仅安装预制滤镜，默认六款，可从十五款中自定义搭配，逐步检查与核验安装"
   default_prompt: "使用 $a7c2-fuji-install 带我一步步安装 A7C2 滤镜，未指定时使用默认六款组合。"

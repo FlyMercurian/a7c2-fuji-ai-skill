@@ -102,6 +102,16 @@ class GuideTests(unittest.TestCase):
         self.assertEqual(result['plan']['replaces_slots'], [2, 5])
         self.spawn.assert_not_called()
 
+    def test_frozen_guide_starts_its_own_worker_without_a_source_checkout(self):
+        self.camera()
+        guide.answer(self.state, 'connected', dict(confirmed=True))
+        portable = str(self.root / 'portable/guide/A7C2Guide.exe')
+        with patch.object(sys, 'frozen', True, create=True), patch.object(sys, 'executable', portable):
+            self.launch('drivers')
+        command = self.spawn.call_args.args[0]
+        self.assertEqual(command[:2], [portable, '_worker'])
+        self.assertNotIn(str(guide.ROOT / 'ai_guide.py'), command)
+
     def test_install_requires_actual_battery_and_slot_replacement_acceptance(self):
         self.prepare()
         for values in ({}, {'confirmed': True}, {'confirmed': True, 'battery': 49, 'replace_slots': True},

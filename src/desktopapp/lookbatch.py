@@ -1,4 +1,5 @@
 """Compose selected imports and ST resets without unrelated feature toggles."""
+from .transactionevidence import read_only_failure
 
 
 def options(rows):
@@ -26,16 +27,3 @@ def options(rows):
     resolved={r['slot']:r for r in result['looks']}
     result['slot_operations']=[dict(resolved[r['slot']],action='write') if r['action']=='write' else r for r in operations]
     return result
-
-
-def read_only_failure(state):
-    """Only retry a failure with evidence that persistent writing never began."""
-    if state.get('phase')!='NEEDS_REVIEW' or state.get('failed_during') not in ('READING','PLANNED','PREFLIGHT_VERIFIED'):
-        return False
-    events=state.get('journal',[])
-    if any(e.get('event')=='native_intent' and e.get('mode') in (1,2,3) for e in events):return False
-    stages=[i for i,e in enumerate(events) if e.get('event')=='native_stage_intent']
-    for n,index in enumerate(stages):
-        stop=stages[n+1] if n+1<len(stages) else len(events)
-        if not any(e.get('event')=='native_cleanup_verified' for e in events[index+1:stop]):return False
-    return True

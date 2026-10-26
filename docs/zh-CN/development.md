@@ -50,6 +50,8 @@
 
 数据目录：Windows 为 `%LOCALAPPDATA%\A7C2Tools`，macOS 为 `~/Library/Application Support/A7C2Tools`，可用 `A7C2_DESKTOP_DATA` 覆盖。界面设置保存在 `desktop.json`。
 
+**预制滤镜精简技能包：**用 `python dev/desktop/build_preset_skill.py --profiles <Profiles目录> --output <新ZIP>` 构建。构建环境需 PyInstaller 6.16.0、PyUSB、libusb-package、pycryptodomex、pyelftools、Keystone、Capstone，现有构建环境提供 Zig 0.13.0。`ai_skill.py` 在单个 EXE 中提供向导、监督和相机 worker。`preset-only.json` 标记启用 `presetpolicy.py` 的分发前白名单，只接受配套预制滤镜及本版本自身事务的续接。`tablecodec.py` 不依赖 NumPy 校验有符号表格。Zig 仅保留执行文件、标准库、编译运行库和头文件；写入 worker 仍需绑定相机当前字节。滤镜库删除电脑端 DCP 和源参考数据，相机表格、照片阶段系数及来源署名完整保留。`check_skill_package.py <ZIP> --report <JSON>` 校验全部文件，移至含中文／空格路径并从 PATH 去掉 Python，测试默认／自定义方案及附加功能拒绝，实际编译四类 worker，全程不打开 USB。未完成事务保留其原运行目录，精简版安装脚本拒绝覆盖完整版；本机配置独立使用 `ai-skill-presets`。原桌面功能及契约保持独立。
+
 ## 动作表
 
 | 动作 | 引擎 | 说明 |
@@ -72,7 +74,7 @@
 
 ## 核心流程
 
-**对话式前端（Windows 预览）：**`ai_guide.py` 调用 `desktopapp.guide`，通过本地 JSON 命令记录用户反馈的机型／版本、默认六款富士／理光方案（Classic Neg.、Classic Chrome、Nostalgic Neg.、Velvia、GR Positive Film、GR Negative Film；已有会话保留原计划）及流程进度。只有 `start` 启动完整 Windows 安装包中的 `A7C2Tools.exe --worker`；初始化时用 `--backend` 选择 EXE。`status`、`plan`、`configure`、`answer`、`diagnostics` 都不打开 USB。后台异步执行，不设杀进程超时；`poll` 取得独立的进程结束凭据后才接收结果。写入暂停时引导断电，结果未知时停止，程序核验后还需用户机身反馈。输入在启动前离线校验并保存快照；其他未完成的向导／直接事务／一键安装会阻止新安装。只有明确处于 `WAIT_RELOAD`／`WAIT_RESOURCE_RELOAD` 的旧一键安装可以主动续接。技能源码在 `skills/a7c2-fuji-install`，通过 `dev/desktop/install_guide_skill.py` 安装；私有设置指向源码目录、Python 环境和原安装包后台，更新时保留当前向导进度。官方固件更新遵循 Sony 指南及用户菜单确认，不以 GUI 固定版本选项作为实机版本证据。本前端不改变原 GUI 默认方案和底层写入／备份契约。
+**对话式前端（Windows 预览）：**`ai_guide.py` 调用 `desktopapp.guide`，通过本地 JSON 命令记录用户反馈的机型／版本、默认六款富士／理光方案（Classic Neg.、Classic Chrome、Nostalgic Neg.、Velvia、GR Positive Film、GR Negative Film；已有会话保留原计划）及流程进度。只有 `start` 启动完整 Windows 安装包中的 `A7C2Tools.exe --worker`；初始化时用 `--backend` 选择 EXE。`status`、`plan`、`configure`、`answer`、`review`、`diagnostics` 都不打开 USB。`review` 只检查启动和结束证据，只有条件满足的 `review --apply` 才记录复核并回到原步骤；它不重放未知相机写入，也不要求用户去桌面 GUI 结案。后台异步执行，不设杀进程超时；`poll` 取得独立的进程结束凭据后才接收结果。写入暂停时引导断电，结果未知时停止，程序核验后还需用户机身反馈。输入在启动前离线校验并保存快照；其他未完成的向导／直接事务／一键安装会阻止新安装。只有明确处于 `WAIT_RELOAD`／`WAIT_RESOURCE_RELOAD` 的旧一键安装可以主动续接。技能源码在 `skills/a7c2-fuji-install`。维护者在装有 PyInstaller 6.16.0 和 NumPy 2.2.6 的环境运行 `python dev/desktop/build_skill.py --backend <A7C2Tools.exe> --output <新ZIP>`，即可生成 Windows 独立分享包。ZIP 内置独立向导和完整后台，接收者无需源码目录或另装 Python。公开入口为 `scripts/guide.cmd`，`doctor` 离线检查资源，`init` 在本机应用数据目录记录进度并兼容旧技能会话。通过 `python dev/desktop/install_guide_skill.py --package <解压后的技能目录>` 安装时，先核对文件清单再复制，保留已有用户进度；仅维护者需要构建依赖。官方固件更新遵循 Sony 指南及用户菜单确认，不以 GUI 固定版本选项作为实机版本证据。本前端不改变原 GUI 默认方案和底层写入／备份契约。
 
 **直接事务**（`looktool/direct.py` 的 `DirectJob`）：
 1. `plan()` 是纯函数：把相机当前字节转换为目标字节和要改的设置，每种模式只改自己声明的区域。`bundle.plan()` 把多个模式（FL23、外观、ST 恢复、声音、竖屏）叠成一个计划。

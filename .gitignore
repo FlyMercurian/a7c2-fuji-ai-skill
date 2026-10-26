@@ -4,6 +4,8 @@ __pycache__/
 .venv-macos/
 .venv-lut/
 .venv-desktop/
+.venv-skill-build/
+skills/a7c2-fuji-install/assets/runtime/
 build/
 desktop-assets/
 private/
