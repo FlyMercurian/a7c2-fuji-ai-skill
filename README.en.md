@@ -50,7 +50,7 @@ This Windows preset-only edition retains driver preparation, preset installation
 
 The screenshot illustrates step-by-step interaction. Some content comes from the older full tool and does not represent this edition's capabilities or prove completed installation or physical acceptance.
 
-![AI-guided A7C II installation example](docs/images/ai/img_v3_0216q_e42ecd3b-3553-4395-921d-a69a3b56180g.jpg)
+![AI-guided A7C II installation example](docs/images/ai/gpt.jpg)
 
 ## Before use
 
